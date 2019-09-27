@@ -1,0 +1,11 @@
+.div {
+  height: 50px;
+  width:  50px;
+  background: red;
+}
+
+.p {
+  color: red;
+  font-size: 50px;
+  font-weight: 600;
+}
