@@ -24,6 +24,11 @@ class Easer {
     this.options = _realOptions
     this._currentTime = 0
     this._increment = this.options.duration / 1000 * 30
+    this._converted = false
+    this._options = {
+      _from: 0,
+      _to: 0,
+    }
   }
 
   _getOptions() {
