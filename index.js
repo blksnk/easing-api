@@ -228,7 +228,6 @@ class Easer {
     const [toValue, toUnit] = options.to
 
     if (!fromUnit && !toUnit) {
-      console.log('same unit or no unit')
       this._setPrivateOption('from', [fromValue, 'px'])
       this._setPrivateOption('to', [toValue, 'px'])
       this._setConverted(false)
