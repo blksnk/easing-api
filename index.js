@@ -180,7 +180,6 @@ class Easer {
     }
   }
 
-
   _sleep(millis) {
     return new Promise(resolve => setTimeout(resolve, millis))
   }
@@ -290,22 +289,28 @@ class Easer {
   }
 
   duration(param) {
-    return this._generateNew({ ...this._getOptions(), duration: param })
+    return this._generateNew({...this._getOptions(),
+      duration: param
+    })
   }
 
   from(param) {
-    if(typeof param === 'number') {
-      return this._generateAltered('from', [ param ])
-    } else {
+    if (typeof param === 'number') {
+      return this._generateAltered('from', [param])
+    } else if (typeof param == 'string') {
       return this._generateAltered('from', this._splitValue(param)[0])
+    } else {
+      throw 'from property must be string or number'
     }
   }
 
   to(param) {
-    if(typeof param === 'number') {
-      return this._generateAltered('to', [ param ])
-    } else {
+    if (typeof param === 'number') {
+      return this._generateAltered('to', [param])
+    } else if (typeof param == 'string') {
       return this._generateAltered('to', this._splitValue(param)[0])
+    } else {
+      throw 'from property must be string or number'
     }
   }
 
@@ -314,8 +319,8 @@ class Easer {
   }
 
   property(param) {
-    if(typeof param === 'string') {
-      if(this._getOptions().style) {
+    if (typeof param === 'string') {
+      if (this._getOptions().style) {
         return this._generateAltered('property', this._formatStyleProperty(param))
       } else {
         return this._generateAltered('property', (param))
@@ -327,10 +332,14 @@ class Easer {
 
   async start() {
     const options = this._getOptions()
-    if(options.delay) {
+    if (options.delay) {
       await this._sleep(options.delay)
     }
-    this._exec(options)
+    try {
+      this._exec()
+    } catch (e) {
+      console.error(e)
+    }
   }
 
   easeInOut() {
