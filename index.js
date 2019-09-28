@@ -180,14 +180,6 @@ class Easer {
     }
   }
 
-  _applyHtmlProperty(val) {
-    const { node, style } = this._getOptions()
-    if(options.style) {
-      options.node.style[options.property] = val + 'px'
-    } else {
-      options.node[options.property] = val
-    }
-  }
 
   _sleep(millis) {
     return new Promise(resolve => setTimeout(resolve, millis))
@@ -263,6 +255,17 @@ class Easer {
       throw 'error compare units'
     }
   }
+  _applyHtmlProperty(values) {
+    const {
+      node,
+      style,
+      property
+    } = this._getOptions()
+    const [number, unit] = values
+    if (style) {
+      node.style[property] = `${number}${unit ? unit : 'px'}`
+    } else {
+      node[property] = number
     }
   }
 
