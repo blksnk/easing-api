@@ -131,30 +131,38 @@ class Easer {
   }
 
   _handleRem(n) {
-    const baseline = this._convertUnitToPixel(this._splitValue(window.getComputedStyle(document.body).fontSize)[0])
+    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(document.body).fontSize)[0])
     return n * baseline
   }
 
   _handleEm(n) {
-    const { node } = this._getOptions() 
+    const {
+      node
+    } = this._getOptions()
     const parent = node.parentNode
-    const baseline = this._convertUnitToPixel(this._splitValue(window.getComputedStyle(parent).fontSize)[0])
+    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(parent).fontSize)[0])
     return n * baseline
   }
 
   _handlePercentage(n) {
-    const { node, property } = this._getOptions() 
-    if(property) {
+    const {
+      node,
+      property
+    } = this._getOptions()
+    if (property) {
       const parent = node.parentNode
-      return this._convertUnitToPixel(this._splitValue(window.getComputedStyle(parent)[property])[0]) / 100 * n
+      return this._convertToPixel(this._splitValue(window.getComputedStyle(parent)[property])[0]) / 100 * n
     } else {
       throw 'must provide property to use percentage'
     }
   }
 
-  _handleViewportUnit(n, isHeight) {
-    const baseline = isHeight ? window.innerHeight : window.innerWidth
-    return baseline / 100 * n
+  _handleViewportHeight(n) {
+    return window.innerHeight / 100 * n
+  }
+
+  _handleViewportWidth(n) {
+    return window.innerWidth / 100 * n
   }
 
   _formatStyleProperty(prop) {
