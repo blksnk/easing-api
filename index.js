@@ -93,9 +93,9 @@ class Easer {
       const [match, number, unit, aloneNumber] = item.match(_letterNumberEx)
       if (match) {
         if (number) {
-          return [ parseInt(number, 10), unit.toLowerCase() ]
+          return [parseInt(number, 10), unit.toLowerCase()]
         } else {
-          return [ parseInt(aloneNumber, 10) ]
+          return [parseInt(aloneNumber, 10)]
         }
       } else {
         throw 'error splitvalue'
@@ -103,13 +103,13 @@ class Easer {
     })
   }
 
-  _convertUnitToPixel(val) {
-    const { node } = this._getOptions()
-    let [ number, style, unit ] = val
-    if(!unit) {
-      return number
-    } else if(node) {
-      switch(unit) {
+  _convertToPixel(val) {
+    const {
+      node
+    } = this._getOptions()
+    let [number, unit] = val
+    if (node) {
+      switch (unit) {
         case 'px':
           return number
         case 'rem':
@@ -119,9 +119,9 @@ class Easer {
         case '%':
           return this._handlePercentage(number)
         case 'vh':
-          return this._handleViewportUnit(number, true)
-        case 'vh':
-          return this._handleViewportUnit(number, false)
+          return this._handleViewportHeight(number)
+        case 'vw':
+          return this._handleViewportWidth(number)
         default:
           throw 'unknown unit used'
       }
