@@ -8,26 +8,13 @@ Math.easeInOutQuad = function(t, b, c, d) {
   return (-c / 2) * (t * (t - 2) - 1) + b
 }
 
-const animate = function(timestamp) {
-    currentTime += increment
-    const val = Math.easeInOutQuad(currentTime, start, change, duration)
-    if (style) {
-      el.style[property] = String(val)
-    } else {
-      el[property] = val
-    }
-    if (currentTime < duration) {
-      setTimeout(() => requestAnimationFrame(animate), increment)
-    }
-  }
-
 class Easer {
   constructor(options) {
     const _realOptions = {
       delay: options.delay || 0,
       duration: options.duration || 0,
       from: options.from || 0,
-      to: options.to || 100,
+      to: options.to || 0,
       value: options.value || 0,
       node: options.node || null,
       property: options.property || null,
