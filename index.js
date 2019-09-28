@@ -209,6 +209,8 @@ class Easer {
     }
     if (this._currentTime <= options.duration) {
       setTimeout(() => requestAnimationFrame(() => this._animate(change)), this._increment)
+    } else {
+      this._setImmediate(options.to)
     }
   }
 
