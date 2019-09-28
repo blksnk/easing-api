@@ -350,6 +350,6 @@ class Easer {
 
 const easer = new Easer({})
 
-// easer.node('.div').style().property('width').easeInOut().duration(500).from('20px').to(500).start()
-// easer.node('.p').style().property('margin-top').easeInOut().from(-10).to(200).delay(1000).start()
-easer.node('.p').property('height')._handlePercentage(14)
+easer.node('.div').style().property('width').easeInOut().duration(500).from('20px').to('100%').start()
+easer.node('.p').style().property('height').easeInOut().duration(500).from(0).to('75vh').delay(1000).start()
+// easer.node('.p').property('height')._handlePercentage(14)
