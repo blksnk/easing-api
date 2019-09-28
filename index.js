@@ -214,12 +214,17 @@ class Easer {
     }
   }
 
-  _exec(options) {
-    const change = options.to[0] - options.from[0]
-    if(!options.duration || !options.transition || !options.from) {
+  _exec() {
+    const options = this._getOptions()
+    const _options = this._getPrivateOptions()
       this._setImmediate(options)
     } else if(options.to) {
       this._animate(change, options)
+    if (!options.duration || !options.transition || !options.from) {
+      this._setImmediate()
+    } else if (options.to) {
+      const change = _options._to[0] - _options._from[0]
+      this._animate(change)
     } else {
       throw 'must specify "to" property'
     }
