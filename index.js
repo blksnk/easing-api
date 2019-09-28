@@ -209,9 +209,9 @@ class Easer {
   _exec() {
     const options = this._getOptions()
     const _options = this._getPrivateOptions()
-      this._setImmediate(options)
-    } else if(options.to) {
-      this._animate(change, options)
+    this._compareUnits()
+    // this._printOptions()
+    // this._printPrivateOptions()
     if (!options.duration || !options.transition || !options.from) {
       this._setImmediate()
     } else if (options.to) {
