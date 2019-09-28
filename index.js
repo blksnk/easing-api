@@ -254,6 +254,19 @@ class Easer {
       throw 'error compare units'
     }
   }
+
+  _setImmediate() {
+    const {
+      node,
+      to
+    } = this._getOptions()
+    if (node) {
+      this._applyHtmlProperty(to)
+    } else {
+      throw 'no node provided to setImmediate'
+    }
+  }
+
   _applyHtmlProperty(values) {
     const {
       node,
