@@ -43,8 +43,40 @@ class Easer {
     return this.options
   }
 
+  _setOption(f, v) {
+    this.options[f] = v
+  }
+
   _alterOption(f, v) {
-    return { ...this._getOptions(), [f]: v }
+    return {...this._getOptions(),
+      [f]: v
+    }
+  }
+
+  _printOptions(param) {
+    const options = this._getOptions()
+    if (param && typeof param === 'string') {
+      console.log(options[param])
+    } else {
+      console.log(options)
+    }
+    return this._generateNew(this._getOptions())
+  }
+
+  _getPrivateOptions() {
+    return this._options
+  }
+
+  _setPrivateOption(f, v) {
+    this._options[`_${f}`] = v
+  }
+
+  _printPrivateOptions() {
+    console.log(this._getPrivateOptions())
+  }
+
+  _setConverted(bool) {
+    this._converted = bool
   }
 
   _generateNew(options) {
