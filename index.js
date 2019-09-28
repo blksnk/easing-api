@@ -88,16 +88,6 @@ class Easer {
     return el
   }
 
-  _printOptions(param) {
-    const options = this._getOptions()
-    if (param && typeof param === 'string') {
-      console.log(options[param])
-    } else {
-      console.log(options)
-    }
-    return this._generateNew(this._getOptions())
-  }
-
   _splitValue(str) {
     return str.split(' ').map(item => {
       const [match, number, unit, aloneNumber] = item.match(_letterNumberEx)
