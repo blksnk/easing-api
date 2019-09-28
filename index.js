@@ -166,13 +166,13 @@ class Easer {
   }
 
   _formatStyleProperty(prop) {
-    if(prop.includes('-')) {
+    if (prop.includes('-')) {
       const formated = prop.split('-').map((str, index) => {
-        if(index > 0) {
+        if (index > 0) {
           return str.charAt(0).toUpperCase() + str.slice(1)
         } else {
           return str
-        }  
+        }
       }).join('')
       return formated
     } else {
