@@ -217,10 +217,39 @@ class Easer {
     }
   }
 
-  _setImmediate(options) {
-    console.log('set immediate')
-    if(options.node) {
-      this._applyHtmlProperty(options.to[0])
+  _compareUnits() {
+    const options = this._getOptions()
+    const [fromValue, fromUnit] = options.from
+    const [toValue, toUnit] = options.to
+
+    if (!fromUnit && !toUnit) {
+      console.log('same unit or no unit')
+      this._setPrivateOption('from', [fromValue, 'px'])
+      this._setPrivateOption('to', [toValue, 'px'])
+      this._setConverted(false)
+    } else if (!fromUnit || !toUnit) {
+      const populatedProp = fromUnit ? 'from' : toUnit ? 'to' : null
+      console.log(populatedProp)
+      if (populatedProp) {
+        const unpopulatedProp = populatedProp === 'from' ? 'to' : 'from'
+
+        this._setPrivateOption(populatedProp, [this._convertToPixel(options[populatedProp]), 'px'])
+        this._setPrivateOption(unpopulatedProp, [options[unpopulatedProp], 'px'])
+        this._setConverted(true)
+      }
+    } else if (fromUnit !== toUnit) {
+      [options.from, options.to].forEach((prop, index) => {
+        this._setPrivateOption(index === 0 ? 'from' : 'to', [this._convertToPixel(prop), 'px'])
+        this._setConverted(true)
+      })
+    } else if (fromUnit === toUnit) {
+      this._setPrivateOption('from', options.from)
+      this._setPrivateOption('to', options.to)
+      this._setConverted(false)
+    } else {
+      throw 'error compare units'
+    }
+  }
     }
   }
 
