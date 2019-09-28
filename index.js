@@ -193,16 +193,22 @@ class Easer {
     return new Promise(resolve => setTimeout(resolve, millis))
   }
 
-  _animate(change, options) {
+  _animate(change) {
+    const options = this._getOptions()
+    const {
+      _from,
+      _to
+    } = this._getPrivateOptions()
     this._currentTime += this._increment
-    const val = Math.easeInOutQuad(this._currentTime, options.from[0], change, options.duration)
+    const val = Math.easeInOutQuad(this._currentTime, _from[0], change, options.duration)
+
     if (options.style) {
-        options.node.style[options.property] = Math.ceil(val * 10) / 10 + 'px'
+      options.node.style[options.property] = `${Math.ceil(val * 10) / 10}${this._converted ? 'px' : _from[1]}`
     } else {
       options.node[options.property] = val
     }
     if (this._currentTime <= options.duration) {
-      setTimeout(() => requestAnimationFrame(() => this._animate(change, options)), this._increment)
+      setTimeout(() => requestAnimationFrame(() => this._animate(change)), this._increment)
     }
   }
 
