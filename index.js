@@ -1,5 +1,12 @@
-const _letterNumberEx = /([0-9]+)([a-z%]{1,3})|([0-9]+)/i
-const _hexToRgbEx = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i
+const _letterNumberRegex = /([0-9]+)([a-z%]{1,3})|([0-9]+)/i
+
+const _hexToRgbRegex = /^#?(([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})|([a-f\d]{1})([a-f\d]{1})([a-f\d]{1}))$/i
+
+const _hslMatchRegex = /^hsl\(\s*(\d+)\s*,\s*(\d*(?:\.\d+)?%)\s*,\s*(\d*(?:\.\d+)?%)\)$/i
+const _hslaMatchRegex = /^hsla\((\d+),\s*([\d.]+)%,\s*([\d.]+)%,\s*(\d*(?:\.\d+)?)\)$/i
+const _rgbMatchRegex = /^rgb\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3})\)$/i
+const _rgbaMatchRegex = /^rgba\((\d{1,3}),\s*(\d{1,3}),\s*(\d{1,3}),\s*(\d*(?:\.\d+)?)\)$/i
+const _hexMatchRegex = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/i
 
 Math.easeInOutQuad = function(t, b, c, d) {
   t /= d / 2
@@ -12,22 +19,30 @@ class Easer {
   constructor(options) {
     const _realOptions = {
       delay: options.delay || 0,
-      duration: options.duration || 0,
-      from: options.from || 0,
-      to: options.to || 0,
-      value: options.value || 0,
+      duration: options.duration || [0],
+      from: options.from || [0],
+      to: options.to || [0],
+      value: options.value || [0],
       node: options.node || null,
       property: options.property || null,
       style: options.style || false,
       transition: options.transition || null,
+      color: options.color || false,
+      chainMaster: options.chainMaster || false,
+      chained: options.chained || false,
+      instances: options.instances || [],
     }
     this.options = _realOptions
     this._currentTime = 0
-    this._increment = this.options.duration / 1000 * 30
+    this._increment = 15
     this._converted = false
     this._options = {
-      _from: 0,
-      _to: 0,
+      _from: [0], //px
+      _to: [0], //px
+      _color: {
+        _from: [0, 0, 0, 0, 0], //rgba
+        _to: [255, 255, 255, 1], //rgba
+      }
     }
   }
 
@@ -40,8 +55,13 @@ class Easer {
   }
 
   _alterOption(f, v) {
-    return {...this._getOptions(),
-      [f]: v
+    if(typeof f === 'object') {
+      return {...this._getOptions(),
+        ...f}
+    } else if(typeof f === 'string' && v) {
+      return {...this._getOptions(),
+        [f]: v
+      }
     }
   }
 
@@ -88,19 +108,122 @@ class Easer {
     return el
   }
 
+  _testColorProp(str) {
+    return (
+      _hexMatchRegex.test(str)
+      || _hslMatchRegex.test(str)
+      || _hslaMatchRegex.test(str)
+      || _rgbMatchRegex.test(str)
+      || _rgbaMatchRegex.test(str)
+    )
+  }
+
+  _convertColorToRgba(str) {
+    if(_rgbMatchRegex.test(str)) {
+      const [ match, r, g, b ] = _rgbMatchRegex.exec(str)
+      return [ parseInt(r), parseInt(g), parseInt(b), 1 ]
+    } else if(_rgbaMatchRegex.test(str)) {
+      const [ match, r, g, b, a ] = _rgbaMatchRegex.exec(str)
+      return [ parseInt(r), parseInt(g), parseInt(b), Number(a) ]
+    } if(_hexMatchRegex.test(str)) {
+      return this._hexToRgb(str)
+    } else if(_hslMatchRegex.test(str)) {
+      const [ match, h, s, l ] = _hslMatchRegex.exec(str)
+      return [ ...this._hslToRgb(h, s, l), 1 ]
+    } else if(_hslaMatchRegex.test(str)) {
+      const [ match, h, s, l, a ] = _hslaMatchRegex.exec(str)
+      return [ ...this._hslToRgb(h, s, l), Number(a) ]
+    }
+  }
+
+  _hslToRgb(h, s, l) {
+    h = parseInt(h)
+    s = parseInt(s) / 100
+    l = parseInt(l) / 100
+    let r, g, b
+    if (s == 0) {
+      r = g = b = l // achromatic
+    } else {
+      let q = l < 0.5 ? l * (1 + s) : l + s - l * s
+      let p = 2 * l - q
+      r = this._hueToRgb(p, q, h + 1 / 3)
+      g = this._hueToRgb(p, q, h)
+      b = this._hueToRgb(p, q, h - 1 / 3)
+    }
+
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)]
+  }
+
+  _hueToRgb(p, q, t) {
+    if (t < 0) {
+      t += 1
+    }
+    if (t > 1) {
+      t -= 1
+    }
+    if (t < 1 / 6) {
+      return p + (q - p) * 6 * t
+    }
+    if (t < 1 / 2) {
+      return q
+    }
+    if (t < 2 / 3) {
+      return p + (q - p) * (2 / 3 - t) * 6
+    }
+    return p
+  }
+
+  _hexToRgb(hex) {
+    const result = _hexToRgbRegex.exec(hex)
+    if(hex.length > 4) { 
+      return [
+        parseInt(result[2], 16),// r
+        parseInt(result[3], 16),// g
+        parseInt(result[4], 16),// b
+        1 // a
+      ]
+    } else {
+      return [
+        parseInt(result[5], 16) * 16,
+        parseInt(result[6], 16) * 16,
+        parseInt(result[7], 16) * 16,
+        1
+      ]
+    }
+  }
+
+  _evalInput(param, propToChange) {
+    if (typeof param === 'number' || param === 0) {
+      this._setOption(propToChange, this._splitValue(String(param)))
+      // return this._generateAltered(propToChange, this._splitValue(String(param)))
+    } else if (typeof param == 'string') {
+      if (this._testColorProp(param)) {
+        this._setOption(propToChange, param)
+        this._setOption('color', true)
+        // return this._generateAltered({ [propToChange]: param, color: true })
+      } else {
+        this._alterOption({})
+        this._setOption(propToChange, this._splitValue(param))
+        // return this._generateAltered(propToChange, this._splitValue(param))
+      }
+    } else {
+      throw 'from property must be string or number'
+    }
+  }
+
   _splitValue(str) {
     return str.split(' ').map(item => {
-      const [match, number, unit, aloneNumber] = item.match(_letterNumberEx)
+      const [match, number, unit, aloneNumber] = item.match(_letterNumberRegex)
       if (match) {
         if (number) {
-          return [parseInt(number, 10), unit.toLowerCase()]
+          return [parseInt(number, 10), String(unit).toLowerCase()]
         } else {
           return [parseInt(aloneNumber, 10)]
         }
       } else {
         throw 'error splitvalue'
       }
-    })
+    })[0]
   }
 
   _convertToPixel(val) {
@@ -109,21 +232,25 @@ class Easer {
     } = this._getOptions()
     let [number, unit] = val
     if (node) {
-      switch (unit) {
-        case 'px':
-          return number
-        case 'rem':
-          return this._handleRem(number)
-        case 'em':
-          return this._handleEm(number)
-        case '%':
-          return this._handlePercentage(number)
-        case 'vh':
-          return this._handleViewportHeight(number)
-        case 'vw':
-          return this._handleViewportWidth(number)
-        default:
-          throw 'unknown unit used'
+      if (!unit) {
+        return number
+      } else {
+        switch (unit) {
+          case 'px':
+            return number
+          case 'rem':
+            return this._handleRem(number)
+          case 'em':
+            return this._handleEm(number)
+          case '%':
+            return this._handlePercentage(number)
+          case 'vh':
+            return this._handleViewportHeight(number)
+          case 'vw':
+            return this._handleViewportWidth(number)
+          default:
+            throw 'unknown unit used'
+        }
       }
     } else {
       throw `can't use css units without node and style methods`
@@ -131,7 +258,7 @@ class Easer {
   }
 
   _handleRem(n) {
-    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(document.body).fontSize)[0])
+    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(document.body).fontSize))
     return n * baseline
   }
 
@@ -140,7 +267,7 @@ class Easer {
       node
     } = this._getOptions()
     const parent = node.parentNode
-    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(parent).fontSize)[0])
+    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(parent).fontSize))
     return n * baseline
   }
 
@@ -151,7 +278,7 @@ class Easer {
     } = this._getOptions()
     if (property) {
       const parent = node.parentNode
-      return this._convertToPixel(this._splitValue(window.getComputedStyle(parent)[property])[0]) / 100 * n
+      return this._convertToPixel(this._splitValue(window.getComputedStyle(parent)[property])) / 100 * n
     } else {
       throw 'must provide property to use percentage'
     }
@@ -184,7 +311,7 @@ class Easer {
     return new Promise(resolve => setTimeout(resolve, millis))
   }
 
-  _animate(change) {
+  _easeValue(change) {
     const options = this._getOptions()
     const {
       _from,
@@ -192,30 +319,88 @@ class Easer {
     } = this._getPrivateOptions()
     this._currentTime += this._increment
     const val = Math.easeInOutQuad(this._currentTime, _from[0], change, options.duration)
-
     if (options.style) {
       options.node.style[options.property] = `${Math.ceil(val * 10) / 10}${this._converted ? 'px' : _from[1]}`
     } else {
       options.node[options.property] = val
     }
     if (this._currentTime <= options.duration) {
-      setTimeout(() => requestAnimationFrame(() => this._animate(change)), this._increment)
+      setTimeout(() => requestAnimationFrame(() => this._easeValue(change)), this._increment)
     } else {
       this._setImmediate(options.to)
     }
   }
 
+  _calcEaseInOut(start, change) {
+    const { duration } = this._getOptions()
+    return Math.easeInOutQuad(this._currentTime, start, change, duration)
+  }
+
+  _easeColor(change) {
+    const { _from, _to } = this._getPrivateOptions()._color
+    const { duration } = this._getOptions()
+    this._currentTime += this._increment
+    const rgbaToApply = []
+    _from.forEach((item, index)=> {
+      rgbaToApply.push(this._calcEaseInOut(item, change[index]))
+    })
+
+    this._applyProperty(rgbaToApply)
+
+    if (this._currentTime <= duration) {
+      setTimeout(() => requestAnimationFrame(() => this._easeColor(change)), this._increment)
+    } 
+    // else {
+    //   this._setImmediate(rgbaToApply)
+    // }
+  }
+
+  _calcChange(start, end) {
+    return start - end
+  }
+
+  _execChain() {
+    const { instances } = this._getOptions()
+    instances.forEach(instance => {
+      instance.start()
+    })
+  }
+
+  _execColorEase() {
+    const options = this._getOptions()
+    this._setPrivateOption('color', {
+      _from: this._convertColorToRgba(options.from),
+      _to: this._convertColorToRgba(options.to),
+    })
+    let changeRgba = []
+    const { _from, _to, _color } = this._getPrivateOptions()
+    _color._from.forEach((item, index) => {
+      changeRgba.push(-this._calcChange(_color._from[index], _color._to[index]))
+    })
+    this._easeColor(changeRgba)
+    
+  }
+
   _exec() {
     const options = this._getOptions()
     const _options = this._getPrivateOptions()
-    this._compareUnits()
-    // this._printOptions()
-    // this._printPrivateOptions()
+    this._evalInput(options.from, 'from')
+    this._evalInput(options.to, 'to')
+    this._printOptions()
     if (!options.duration || !options.transition || !options.from) {
+      console.log('immediate triggered in _exec')
       this._setImmediate()
     } else if (options.to) {
-      const change = _options._to[0] - _options._from[0]
-      this._animate(change)
+      if(options.color) {
+        console.log('color triggered in _exec')
+        this._execColorEase()
+      } else {
+        console.log('value triggered in _exec')
+        this._compareUnits()
+        const change = this._calcChange(_options._to[0], _options._from[0])
+        console.log('change', change)
+        requestAnimationFrame(() => this._easeValue(change))
+      }
     } else {
       throw 'must specify "to" property'
     }
@@ -232,10 +417,8 @@ class Easer {
       this._setConverted(false)
     } else if (!fromUnit || !toUnit) {
       const populatedProp = fromUnit ? 'from' : toUnit ? 'to' : null
-      console.log(populatedProp)
       if (populatedProp) {
         const unpopulatedProp = populatedProp === 'from' ? 'to' : 'from'
-
         this._setPrivateOption(populatedProp, [this._convertToPixel(options[populatedProp]), 'px'])
         this._setPrivateOption(unpopulatedProp, [options[unpopulatedProp], 'px'])
         this._setConverted(true)
@@ -260,24 +443,62 @@ class Easer {
       to
     } = this._getOptions()
     if (node) {
-      this._applyHtmlProperty(to)
+      this._applyProperty(to)
     } else {
       throw 'no node provided to setImmediate'
     }
   }
 
-  _applyHtmlProperty(values) {
-    const {
-      node,
-      style,
-      property
-    } = this._getOptions()
-    const [number, unit] = values
-    if (style) {
-      node.style[property] = `${number}${unit ? unit : 'px'}`
+  _setNodeProperty(v1, v2) {
+    const { node, style, property } = this._getOptions()
+    // by default, set same value whether style === true or not, but can feed a second value if want something else when no style
+    if(style) {
+      node.style[property] = v1
     } else {
-      node[property] = number
+      node[property] = v2 ? v2 : v1
     }
+  }
+
+  _applyProperty(toApply) {
+    const { color, node } = this._getOptions()
+    if(color) {
+      if(node) {
+        this._applyColor(toApply)
+      } else {
+        throw 'color set only supported on node'
+      }
+    } else {
+      if(node) {
+        const [value, unit] = toApply
+        const str = `${value}${unit}`
+        this._setNodeProperty(str, value)
+      } else {
+        throw 'css props only applicable to nodes'
+      }
+    }
+  }
+
+  _applyColor(rgba) {
+    const { node, style, property } = this._getOptions()
+    const [ r, g, b, a ] = rgba
+    const str = `rgba(${r},${g},${b},${a})`
+    this._setNodeProperty(str)
+  }
+
+  parallel(items) {
+    const options = this._getOptions()
+    const instances = items.map((item, index) => {
+      return new Easer({
+        ...item,
+        style: item.style || options.style,
+        delay: item.delay || options.delay,
+        node: this._selectNode(item.node) || options.node,
+        transition: item.transition || options.transition,
+        duration: item.duration || options.duration,
+        chained: true,
+      })
+    })
+    return this._generateAltered({ instances, chainMaster: true })
   }
 
   delay(millis) {
@@ -288,30 +509,20 @@ class Easer {
     return this._generateAltered('node', this._selectNode(param))
   }
 
-  duration(param) {
-    return this._generateNew({...this._getOptions(),
-      duration: param
-    })
+  duration(millis) {
+    return this._generateAltered('duration', millis)
+  }
+
+  color() {
+    return this._generateAltered('color', true)
   }
 
   from(param) {
-    if (typeof param === 'number') {
-      return this._generateAltered('from', [param])
-    } else if (typeof param == 'string') {
-      return this._generateAltered('from', this._splitValue(param)[0])
-    } else {
-      throw 'from property must be string or number'
-    }
+    return this._generateAltered('from', param)
   }
 
   to(param) {
-    if (typeof param === 'number') {
-      return this._generateAltered('to', [param])
-    } else if (typeof param == 'string') {
-      return this._generateAltered('to', this._splitValue(param)[0])
-    } else {
-      throw 'from property must be string or number'
-    }
+    return this._generateAltered('to', param)
   }
 
   style() {
@@ -331,14 +542,14 @@ class Easer {
   }
 
   async start() {
-    const options = this._getOptions()
-    if (options.delay) {
-      await this._sleep(options.delay)
+    const { delay, chainMaster } = this._getOptions()
+    if (delay) {
+      await this._sleep(delay)
     }
-    try {
+    if(chainMaster) {
+      this._execChain()
+    } else {
       this._exec()
-    } catch (e) {
-      console.error(e)
     }
   }
 
@@ -347,9 +558,3 @@ class Easer {
     return this._generateAltered('transition', 'ease-in-out')
   }
 }
-
-const easer = new Easer({})
-
-easer.node('.div').style().property('width').easeInOut().duration(500).from('20px').to('100%').start()
-easer.node('.p').style().property('height').easeInOut().duration(500).from(0).to('75vh').delay(1000).start()
-// easer.node('.p').property('height')._handlePercentage(14)
