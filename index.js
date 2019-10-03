@@ -558,3 +558,440 @@ class Easer {
     return this._generateAltered('transition', 'ease-in-out')
   }
 }
+
+class Transition {
+  constructor(options) {
+    if(options) {
+      const _realOptions = {
+        from: options.from || null,
+        to: options.to || null,
+        property: options.property || null,
+        duration: options.duration || 1000,
+      }
+      this.options = _realOptions
+    } else {
+      this.options = {
+        from: null,
+        to: null,
+        property: null,
+        duration: 1000,
+      }
+    }
+  }
+
+  _getOptions() {
+    return this.options
+  }
+
+  _generateNew(options) {
+    return new Transition(options)
+  }
+
+  _generateAltered(f, v) {
+    return new Transition({
+      ...this._getOptions(),
+      [f]: v
+    })
+  }
+
+  to(param) {
+    return this._generateAltered('to', param)
+  }
+
+  from(param) {
+    return this._generateAltered('from', param)
+  }
+
+  property(param) {
+    return this._generateAltered('property', param)
+  }
+
+  duration(param) {
+    return this._generateAltered('duration', param)
+  }
+
+  Delay(millis) {
+    return this._generateNew({ duration: millis })
+  }
+}
+
+
+
+class Runnable {
+  constructor(input) {
+    this.options = {
+      from: null,
+      to: null,
+      duration: 1000,
+      property: null,
+      mode: null, // color || style || value || delay
+      originalOptions: {}
+    }
+    this._converter = new _Converter()
+    this._formatter = new _Formatter()
+    this._formatSingle(input)
+  }
+
+  _getOptions() {
+    return this.options
+  }
+
+  _setOption(f, v) {
+    this.options[f] = v
+  }
+
+  _setMode(mode) {
+    this._setOption('mode', mode)
+  }
+
+  _formatSingle(transition) {
+    const { options } = transition
+    this._setOption('originalOptions', options)
+    if(!options.from && !options.to && !options.property && options.duration) {
+      this._setMode('delay')
+    } else {
+      this._setOption('from', this._evalInput(options.from))
+      this._setOption('to', this._evalInput(options.to))
+      if(this.options.mode === 'style') {
+        console.log('style')
+      }
+    }
+    if(options.property) {
+      this._setOption('property', this._formatter._formatStyleProperty(options.property))
+    }
+    this._setOption('duration', options.duration)
+  }
+
+  _evalInput(input) {
+    if (typeof input === 'number' || input === 0) {
+      return this._splitValue(String(input))
+    } else if (typeof input == 'string') {
+      if (this._testColorProp(input)) {
+        this._setMode('color')
+        return this._converter.convertColorToRgba(input)
+      } else {
+        return this._splitValue(input)
+      }
+    } else {
+      throw new Error('"from" and "to" must be string or number')
+    }
+  }
+
+  _splitValue(str) {
+    const [match, number, unit, aloneNumber] = str.match(_letterNumberRegex)
+    if (match) {
+      if (number) {
+        this._setMode('style')
+        return [parseInt(number, 10), String(unit).toLowerCase()]
+      } else {
+        this._setMode('value')
+        return [parseInt(aloneNumber, 10)]
+      }
+    } else {
+      throw 'error splitvalue'
+    }
+  }
+
+  _testColorProp(str) {
+    return (
+      _hexMatchRegex.test(str)
+      || _hslMatchRegex.test(str)
+      || _hslaMatchRegex.test(str)
+      || _rgbMatchRegex.test(str)
+      || _rgbaMatchRegex.test(str)
+    )
+  }
+}
+
+class _Converter {
+
+  convertColorToRgba(str) {
+    if(_rgbMatchRegex.test(str)) {
+      const [ match, r, g, b ] = _rgbMatchRegex.exec(str)
+      return [ parseInt(r), parseInt(g), parseInt(b), 1 ]
+    } else if(_rgbaMatchRegex.test(str)) {
+      const [ match, r, g, b, a ] = _rgbaMatchRegex.exec(str)
+      return [ parseInt(r), parseInt(g), parseInt(b), Number(a) ]
+    } if(_hexMatchRegex.test(str)) {
+      return this._hexToRgb(str)
+    } else if(_hslMatchRegex.test(str)) {
+      const [ match, h, s, l ] = _hslMatchRegex.exec(str)
+      return [ ...this._hslToRgb(h, s, l), 1 ]
+    } else if(_hslaMatchRegex.test(str)) {
+      const [ match, h, s, l, a ] = _hslaMatchRegex.exec(str)
+      return [ ...this._hslToRgb(h, s, l), Number(a) ]
+    }
+  }
+
+  _hslToRgb(h, s, l) {
+    h = parseInt(h)
+    s = parseInt(s) / 100
+    l = parseInt(l) / 100
+    let r, g, b
+    if (s == 0) {
+      r = g = b = l // achromatic
+    } else {
+      let q = l < 0.5 ? l * (1 + s) : l + s - l * s
+      let p = 2 * l - q
+      r = this._hueToRgb(p, q, h + 1 / 3)
+      g = this._hueToRgb(p, q, h)
+      b = this._hueToRgb(p, q, h - 1 / 3)
+    }
+    return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)]
+  }
+
+  _hueToRgb(p, q, t) {
+    if (t < 0) t += 1
+    if (t > 1) t -= 1
+    if (t < 1 / 6) return p + (q - p) * 6 * t
+    if (t < 1 / 2) return q
+    if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6
+    return p
+  }
+
+  _hexToRgb(hex) {
+    const result = _hexToRgbRegex.exec(hex)
+    if(hex.length > 4) return [
+      parseInt(result[2], 16),// r
+      parseInt(result[3], 16),// g
+      parseInt(result[4], 16),// b
+      1 //                       a
+    ]
+    else return [
+      parseInt(result[5], 16) * 17,
+      parseInt(result[6], 16) * 17,
+      parseInt(result[7], 16) * 17,
+      1
+    ]
+  }
+
+  convertToPixel(val) {
+    const {
+      node
+    } = this._getOptions()
+    let [number, unit] = val
+    if (node) {
+      if (!unit) {
+        return number
+      } else {
+        switch (unit) {
+          case 'px':
+            return number
+          case 'rem':
+            return this._handleRem(number)
+          case 'em':
+            return this._handleEm(number)
+          case '%':
+            return this._handlePercentage(number)
+          case 'vh':
+            return this._handleViewportHeight(number)
+          case 'vw':
+            return this._handleViewportWidth(number)
+          default:
+            throw 'unknown unit used'
+        }
+      }
+    } else {
+      throw `can't use css units without node and style methods`
+    }
+  }
+
+  _handleRem(n) {
+    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(document.body).fontSize))
+    return n * baseline
+  }
+
+  _handleEm(n, node) {
+    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(node.parentNode).fontSize))
+    return n * baseline
+  }
+
+  _handlePercentage(n, node, property) {
+    const baseline = this._convertToPixel(this._splitValue(window.getComputedStyle(node.parentNode)[property]))
+    return baseline / 100 * n
+  }
+
+  _handleViewportHeight(n) {
+    return window.innerHeight / 100 * n
+  }
+
+  _handleViewportWidth(n) {
+    return window.innerWidth / 100 * n
+  }
+}
+
+class _Formatter {
+
+  _formatStyleProperty(prop) {
+    if (prop.includes('-')) {
+      const formated = prop.split('-').map((str, index) => {
+        if (index > 0) {
+          return str.charAt(0).toUpperCase() + str.slice(1)
+        } else {
+          return str
+        }
+      }).join('')
+      return formated
+    } else {
+      return prop
+    }
+  }
+
+  _formatNode(node) {
+    return typeof node === 'string' ? document.querySelector(node) : node
+  }
+}
+
+class Runtime {
+  constructor(options, queue) {
+    this.options = {
+      use: options.use || 'DOM',
+      node: options.node || null,
+      value: options.value || null,
+    }
+    this.queue = queue || [ ]
+    this._formatter = new _Formatter()
+  }
+
+  _getOptions() {
+    return this.options
+  }
+
+  _alterOption(f, v) {
+    if(typeof f === 'object') {
+      return {...this._getOptions(),
+        ...f}
+    } else if(typeof f === 'string' && v) {
+      return {...this._getOptions(),
+        [f]: v
+      }
+    }
+  }
+
+  _generateNew(options) {
+    return new Runtime(options)
+  }
+
+  _generateAltered(f, v) {
+    return this._generateNew(this._alterOption(f, v))
+  }
+
+  _getQueue() {
+    return this.queue
+  }
+
+  _setQueue(param) {
+    this.queue = param
+  }
+
+  _addToQueue(param) {
+    const queue = this._getQueue()
+    if(queue.length === 0) { //queue has no transitions and is not yet defined as sequence or parallel
+      if(Array.isArray(param) && (param[0] === 'p' || param[0] === 's')) {
+        console.log('available to add to queue', param)
+        this._setQueue(param)
+      }
+    } else { //queue is either sequence or parallel
+
+    }
+  }
+
+  _convertToRunnableIfNeeded(param) {
+    if(param instanceof Transition) {
+      return new Runnable(param)
+    } else if (param instanceof Runnable) {
+      return param
+    } else {
+      throw new Error('invalid param supplied to _convertToRunnableIfNeeded: ', param)
+    }
+  }
+
+  _getListType(list) {
+    return list[0]
+  }
+
+  _handleNestedList(list) {
+    if(this._getListType(list) === 'p') {
+      return this.parallel(list.filter(item => this._getListType(item) === 'p' ? false : true))
+    } else if (this._getListType(list) === 's') {
+      return this.sequence(list.filter(item => this._getListType(item) === 's' ? false : true))
+    }
+  }
+
+  parallel(list) {
+    //this takes a list of runnables or transitions and returns a formatted array
+    if(Array.isArray(list)) {
+      const runnables = list.map(item => {
+        if(Array.isArray(item)) {
+          return this._handleNestedList(item)
+        } else if(item instanceof Transition || item instanceof Runnable) {
+          return this._convertToRunnableIfNeeded(item)
+        }
+      })
+      runnables.unshift('p')
+      console.log(runnables)
+      return runnables
+
+    } else {
+      throw new Error('parallel method takes an array of Transitions')
+    }
+  }
+
+  sequence(list) {
+    //this takes a list of runnables or transitions and returns a formatted array
+    if(Array.isArray(list)) {
+      const runnables = list.map(item => {
+        if(Array.isArray(item)) {
+          return this._handleNestedList(item)
+        } else if(item instanceof Transition || item instanceof Runnable) {
+          return this._convertToRunnableIfNeeded(item)
+        }
+      })
+      runnables.unshift('s')
+      console.log(runnables)
+      return runnables
+
+    } else {
+      throw new Error('parallel method takes an array of Transitions')
+    }
+  }
+
+  use(engine) {
+    return this._generateAltered('use', String(engine).toUpperCase())
+  }
+
+  node(el) {
+    return this._generateAltered('node', this._formatter._formatNode(el))
+  }
+
+
+}
+
+
+const height = new Transition().to('120px').from('100vw').property('height').duration(300)
+const delay = new Transition().Delay(500)
+const backgroundColor = new Transition({
+  from: '#AF6B98',
+  to: '#FFF',
+  property: 'backgroundColor',
+  duration: 3000,
+})
+
+const runnableTransition = new Runnable(height)
+// const runnnableDelay = new Runnable(delay)
+const runnableBackgroundColor = new Runnable(backgroundColor)
+
+const rt = new Runtime({}).use('ENGINE').node('.div')
+rt.sequence([
+  backgroundColor,
+  height,
+  rt.parallel([
+    backgroundColor,
+    height,
+    rt.sequence([
+      delay,
+      runnableBackgroundColor
+    ])
+  ]),
+  runnableTransition
+])

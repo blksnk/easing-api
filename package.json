@@ -1,6 +1,6 @@
 {
   "name": "frameshift",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "main": "index.js",
   "repository": "git@github.com:blksnk/frameshift.git",
   "author": "JN Veigel <art.jnveigel@gmail.com>",
